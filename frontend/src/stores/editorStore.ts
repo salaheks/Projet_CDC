@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import axios from 'axios';
 import {
   type Connection,
   type Edge,
@@ -32,9 +33,13 @@ type EditorState = {
   addNode: (node: AppNode) => void;
   updateNodeData: (id: string, data: Partial<DeviceData>) => void;
   setSelectedNode: (node: AppNode | null) => void;
+  isLoading: boolean;
+  saveArchitecture: (projectId: string) => Promise<void>;
+  loadArchitecture: (projectId: string) => Promise<void>;
 };
 
 export const useEditorStore = create<EditorState>((set, get) => ({
+  isLoading: false,
   nodes: [],
   edges: [],
   selectedNode: null,
@@ -60,7 +65,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({
       nodes: get().nodes.map((node) => {
         if (node.id === id) {
-          node.data = { ...node.data, ...data };
+          return { ...node, data: { ...node.data, ...data } };
         }
         return node;
       }),
@@ -72,5 +77,33 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
   setSelectedNode: (node: AppNode | null) => {
     set({ selectedNode: node });
+  },
+  saveArchitecture: async (projectId: string) => {
+    try {
+      set({ isLoading: true });
+      const { nodes, edges } = get();
+      await axios.put(`http://localhost:3000/projects/${projectId}/state`, {
+        canvasData: { nodes, edges }
+      });
+    } catch (error) {
+      console.error('Failed to save architecture', error);
+      alert('Erreur lors de la sauvegarde');
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+  loadArchitecture: async (projectId: string) => {
+    try {
+      set({ isLoading: true });
+      const response = await axios.get(`http://localhost:3000/projects/${projectId}`);
+      if (response.data?.state?.canvasData) {
+        const { nodes, edges } = response.data.state.canvasData;
+        set({ nodes: nodes || [], edges: edges || [] });
+      }
+    } catch (error) {
+      console.error('Failed to load architecture', error);
+    } finally {
+      set({ isLoading: false });
+    }
   }
 }));

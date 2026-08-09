@@ -90,6 +90,10 @@ export default function NetworkCanvas() {
           onDragOver={onDragOver}
           onSelectionChange={onSelectionChange}
           nodeTypes={nodeTypes}
+          defaultEdgeOptions={{
+            animated: true,
+            style: { strokeWidth: 2, stroke: '#94a3b8' },
+          }}
           fitView
           className="bg-slate-50"
         >

@@ -19,6 +19,19 @@ export class ProjectsService {
   }
 
   async saveState(id: string, canvasData: any) {
+    let user = await this.prisma.user.findFirst();
+    if (!user) {
+      user = await this.prisma.user.create({
+        data: { email: 'admin@demo.com', password: 'password', name: 'Admin Demo' }
+      });
+    }
+
+    await this.prisma.project.upsert({
+      where: { id },
+      update: {},
+      create: { id, name: 'Architecture Démo', ownerId: user.id }
+    });
+
     return this.prisma.projectState.upsert({
       where: { projectId: id },
       update: { canvasData },
