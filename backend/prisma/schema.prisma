@@ -1,0 +1,49 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  password  String
+  name      String
+  role      String    @default("Architect")
+  projects  Project[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Project {
+  id          String        @id @default(uuid())
+  name        String
+  description String?
+  ownerId     String
+  owner       User          @relation(fields: [ownerId], references: [id])
+  state       ProjectState?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model ProjectState {
+  id         String   @id @default(uuid())
+  projectId  String   @unique
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  canvasData Json
+  updatedAt  DateTime @updatedAt
+}
+
+model DeviceCatalog {
+  id           String   @id @default(uuid())
+  type         String   // e.g., "router", "switch", "firewall", "server"
+  manufacturer String
+  model        String
+  ports        Int      @default(0)
+  throughput   Int      @default(0) // in Mbps
+  power        Int      @default(0) // in Watts
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
