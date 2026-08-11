@@ -1,0 +1,30 @@
+{
+  "nodes": [
+    {
+      "id":"vpc-01",
+      "type":"network.vpc",
+      "meta":{"cidr":"10.0.0.0/16","name":"demo-vpc"}
+    },
+    {
+      "id":"subnet-priv-01",
+      "type":"network.subnet",
+      "meta":{"cidr":"10.0.1.0/24","vpc":"vpc-01","name":"private-subnet"}
+    },
+    {
+      "id":"sg-web-01",
+      "type":"security.group",
+      "meta":{
+        "name":"sg-web",
+        "description":"Web SG",
+        "ingress":[{"proto":"tcp","port":22,"cidr":"0.0.0.0/0"},{"proto":"tcp","port":80,"cidr":"0.0.0.0/0"}]
+      }
+    },
+    {
+      "id":"web-01",
+      "type":"compute.instance",
+      "meta":{"ami":"ami-01234567","instance_type":"t3.micro"},
+      "interfaces":[{"id":"if-1","subnet_id":"subnet-priv-01"}],
+      "security_groups":["sg-web-01"]
+    }
+  ]
+}

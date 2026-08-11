@@ -1,3 +1,8 @@
+// ============================================================
+// Prisma Schema — Plateforme de Conception d'Architecture
+// Version: 2.0 (Diagram as Code)
+// ============================================================
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -6,44 +11,260 @@ datasource db {
   provider = "postgresql"
 }
 
+// ============================================================
+// IDENTITÉ & ACCÈS
+// ============================================================
+
 model User {
-  id        String    @id @default(uuid())
-  email     String    @unique
-  password  String
-  name      String
-  role      String    @default("Architect")
-  projects  Project[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id             String                @id @default(uuid())
+  email          String                @unique
+  passwordHash   String
+  name           String
+  avatarUrl      String?
+  role           GlobalRole            @default(ARCHITECT)
+  ownedProjects  Project[]             @relation("ProjectOwner")
+  collaborations ProjectCollaborator[]
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
 }
+
+enum GlobalRole {
+  ADMIN
+  ARCHITECT
+  VIEWER
+}
+
+// ============================================================
+// PROJETS & COLLABORATION
+// ============================================================
 
 model Project {
-  id          String        @id @default(uuid())
-  name        String
+  id             String                @id @default(uuid())
+  name           String
+  description    String?
+  ownerId        String
+  owner          User                  @relation("ProjectOwner", fields: [ownerId], references: [id])
+  collaborators  ProjectCollaborator[]
+  versions       ProjectVersion[]
+  settings       ProjectSettings?
+  validations    ValidationReport[]
+  status         ProjectStatus         @default(DRAFT)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  @@index([ownerId])
+}
+
+enum ProjectStatus {
+  DRAFT
+  IN_REVIEW
+  VALIDATED
+  ARCHIVED
+}
+
+model ProjectCollaborator {
+  id        String           @id @default(uuid())
+  projectId String
+  project   Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      CollaboratorRole @default(EDITOR)
+
+  @@unique([projectId, userId])
+}
+
+enum CollaboratorRole {
+  OWNER
+  EDITOR
+  COMMENTER
+  VIEWER
+}
+
+model ProjectSettings {
+  id                   String  @id @default(uuid())
+  projectId            String  @unique
+  project              Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  defaultCloudProvider String? // "aws", "gcp", "azure", "on-premise"
+  autoValidate         Boolean @default(true)
+  autoSaveInterval     Int     @default(30) // seconds
+}
+
+// ============================================================
+// VERSIONNAGE DU GRAPHE
+// ============================================================
+
+model ProjectVersion {
+  id        String     @id @default(uuid())
+  projectId String
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  version   Int
+  label     String? // "v1.0 — Ajout DMZ"
+  snapshot  Json? // Full snapshot for fast restore
+  nodes     ArchNode[]
+  edges     ArchEdge[]
+  createdAt DateTime   @default(now())
+
+  @@unique([projectId, version])
+  @@index([projectId])
+}
+
+// ============================================================
+// NŒUDS & ARÊTES DU GRAPHE D'ARCHITECTURE
+// ============================================================
+
+model ArchNode {
+  id            String           @id @default(uuid())
+  versionId     String
+  version       ProjectVersion   @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  catalogItemId String?
+  catalogItem   CatalogComponent? @relation(fields: [catalogItemId], references: [id])
+  parentId      String? // Groupage (VPC, subnet, zone)
+  parent        ArchNode?        @relation("NodeHierarchy", fields: [parentId], references: [id])
+  children      ArchNode[]       @relation("NodeHierarchy")
+
+  // Position sur le canvas
+  positionX Float
+  positionY Float
+  width     Float?
+  height    Float?
+
+  // Métadonnées du nœud
+  label    String
+  nodeType String // "router", "switch", "vpc", "subnet", "ec2", ...
+  provider String? // "aws", "gcp", "azure", "physical"
+
+  // Propriétés dynamiques (schéma flexible)
+  properties Json @default("{}")
+
+  // Relations d'arêtes
+  outgoingEdges ArchEdge[] @relation("EdgeSource")
+  incomingEdges ArchEdge[] @relation("EdgeTarget")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([versionId])
+  @@index([parentId])
+  @@index([nodeType])
+}
+
+model ArchEdge {
+  id        String         @id @default(uuid())
+  versionId String
+  version   ProjectVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  sourceId  String
+  source    ArchNode       @relation("EdgeSource", fields: [sourceId], references: [id], onDelete: Cascade)
+  targetId  String
+  target    ArchNode       @relation("EdgeTarget", fields: [targetId], references: [id], onDelete: Cascade)
+
+  edgeType   EdgeType @default(NETWORK_LINK)
+  label      String?
+  properties Json     @default("{}")
+
+  createdAt DateTime @default(now())
+
+  @@index([versionId])
+  @@index([sourceId])
+  @@index([targetId])
+}
+
+enum EdgeType {
+  NETWORK_LINK
+  LOGICAL_LINK
+  VPN_TUNNEL
+  PEERING
+  LOAD_BALANCED
+  DEPENDENCY
+  CONTAINS
+  ROUTES_TO
+  SECURES
+}
+
+// ============================================================
+// CATALOGUE DE COMPOSANTS
+// ============================================================
+
+model CatalogCategory {
+  id         String             @id @default(uuid())
+  name       String // "Compute", "Networking", "Storage", "Security"
+  icon       String?
+  provider   String? // null = multi-provider
+  sortOrder  Int                @default(0)
+  components CatalogComponent[]
+
+  @@unique([name, provider])
+}
+
+model CatalogComponent {
+  id          String          @id @default(uuid())
+  categoryId  String
+  category    CatalogCategory @relation(fields: [categoryId], references: [id])
+  name        String // "EC2 Instance", "Cloud SQL", "FortiGate 60F"
+  type        String // "ec2", "cloud-sql", "fortigate-60f"
+  provider    String // "aws", "gcp", "azure", "cisco", "fortinet", "generic"
   description String?
-  ownerId     String
-  owner       User          @relation(fields: [ownerId], references: [id])
-  state       ProjectState?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  icon        String?
+
+  // Schema of editable properties for this type
+  propertySchema Json @default("[]")
+
+  // Default IaC templates
+  terraformTemplate String?
+  ansibleTemplate   String?
+
+  // Default available ports
+  defaultPorts Json?
+
+  // Instances of this component in architectures
+  nodes ArchNode[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([type, provider])
+  @@index([categoryId])
+  @@index([provider])
 }
 
-model ProjectState {
-  id         String   @id @default(uuid())
-  projectId  String   @unique
-  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  canvasData Json
-  updatedAt  DateTime @updatedAt
+// ============================================================
+// VALIDATION & RAPPORTS
+// ============================================================
+
+model ValidationReport {
+  id         String            @id @default(uuid())
+  projectId  String
+  project    Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  versionNum Int
+  status     ValidationStatus
+  issues     ValidationIssue[]
+  summary    String?
+  executedAt DateTime          @default(now())
+
+  @@index([projectId])
 }
 
-model DeviceCatalog {
-  id           String   @id @default(uuid())
-  type         String   // e.g., "router", "switch", "firewall", "server"
-  manufacturer String
-  model        String
-  ports        Int      @default(0)
-  throughput   Int      @default(0) // in Mbps
-  power        Int      @default(0) // in Watts
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+enum ValidationStatus {
+  PASSED
+  WARNING
+  FAILED
+}
+
+model ValidationIssue {
+  id         String           @id @default(uuid())
+  reportId   String
+  report     ValidationReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  severity   IssueSeverity
+  ruleCode   String // "SEC-001", "NET-003", "PERF-002"
+  message    String
+  nodeId     String? // Concerned node (if applicable)
+  edgeId     String? // Concerned edge (if applicable)
+  suggestion String?
+
+  @@index([reportId])
+}
+
+enum IssueSeverity {
+  ERROR
+  WARNING
+  INFO
 }
