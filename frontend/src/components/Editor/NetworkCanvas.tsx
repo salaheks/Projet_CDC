@@ -14,9 +14,6 @@ const nodeTypes = {
   custom: CustomNode,
 };
 
-let id = 0;
-const getId = () => `dndnode_${id++}`;
-
 export default function NetworkCanvas() {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
@@ -40,10 +37,10 @@ export default function NetworkCanvas() {
     (event: React.DragEvent) => {
       event.preventDefault();
 
-      const typeData = event.dataTransfer.getData('application/reactflow');
-      if (!typeData) return;
+      const rawData = event.dataTransfer.getData('application/reactflow');
+      if (!rawData) return;
 
-      const { type, label } = JSON.parse(typeData);
+      const payload = JSON.parse(rawData);
 
       if (!reactFlowInstance || !reactFlowWrapper.current) return;
 
@@ -53,16 +50,26 @@ export default function NetworkCanvas() {
         y: event.clientY - reactFlowBounds.top,
       });
 
+      // Generate a stable UUID for the node
+      const nodeId = `node_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+
       const newNode: Node = {
-        id: getId(),
+        id: nodeId,
         type: 'custom',
         position,
-        data: { label, type },
+        data: {
+          label: payload.label,
+          type: payload.type,
+          provider: payload.provider || 'aws',
+          catalogItemId: payload.catalogItemId,
+          propertySchema: payload.propertySchema || [],
+          properties: buildDefaultProperties(payload.propertySchema || []),
+        },
       };
 
       addNode(newNode);
     },
-    [reactFlowInstance, addNode]
+    [reactFlowInstance, addNode],
   );
 
   const onSelectionChange = useCallback(
@@ -73,8 +80,12 @@ export default function NetworkCanvas() {
         setSelectedNode(null);
       }
     },
-    [setSelectedNode]
+    [setSelectedNode],
   );
+
+  const onPaneClick = useCallback(() => {
+    setSelectedNode(null);
+  }, [setSelectedNode]);
 
   return (
     <div className="absolute inset-0" ref={reactFlowWrapper}>
@@ -89,19 +100,40 @@ export default function NetworkCanvas() {
           onDrop={onDrop}
           onDragOver={onDragOver}
           onSelectionChange={onSelectionChange}
+          onPaneClick={onPaneClick}
           nodeTypes={nodeTypes}
           defaultEdgeOptions={{
             animated: true,
-            style: { strokeWidth: 2, stroke: '#94a3b8' },
+            style: { strokeWidth: 2, stroke: '#6366f1' },
           }}
           fitView
-          className="bg-slate-50"
+          className="bg-gradient-to-br from-slate-50 to-slate-100"
+          snapToGrid
+          snapGrid={[16, 16]}
         >
           <Background color="#cbd5e1" gap={16} />
-          <Controls />
-          <MiniMap nodeStrokeColor="#94a3b8" nodeColor="#e2e8f0" maskColor="rgba(241, 245, 249, 0.7)" />
+          <Controls className="!bg-white !border-slate-200 !shadow-lg !rounded-xl" />
+          <MiniMap
+            nodeStrokeColor="#6366f1"
+            nodeColor="#e0e7ff"
+            maskColor="rgba(241, 245, 249, 0.8)"
+            className="!bg-white !border-slate-200 !shadow-lg !rounded-xl"
+          />
         </ReactFlow>
       </ReactFlowProvider>
     </div>
   );
+}
+
+/**
+ * Build default property values from a propertySchema.
+ */
+function buildDefaultProperties(schema: any[]): Record<string, unknown> {
+  const defaults: Record<string, unknown> = {};
+  for (const field of schema) {
+    if (field.defaultValue !== undefined) {
+      defaults[field.key] = field.defaultValue;
+    }
+  }
+  return defaults;
 }

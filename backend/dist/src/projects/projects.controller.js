@@ -15,26 +15,38 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProjectsController = void 0;
 const common_1 = require("@nestjs/common");
 const projects_service_1 = require("./projects.service");
+const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
+const current_user_decorator_1 = require("../auth/decorators/current-user.decorator");
 let ProjectsController = class ProjectsController {
     projectsService;
     constructor(projectsService) {
         this.projectsService = projectsService;
     }
-    findAll() {
-        return this.projectsService.findAll();
+    findAll(userId) {
+        return this.projectsService.findAll(userId);
     }
     findOne(id) {
         return this.projectsService.findOne(id);
     }
-    saveState(id, body) {
-        return this.projectsService.saveState(id, body.canvasData);
+    create(userId, body) {
+        return this.projectsService.create({ ...body, ownerId: userId });
+    }
+    update(id, body) {
+        return this.projectsService.update(id, body);
+    }
+    delete(id) {
+        return this.projectsService.delete(id);
+    }
+    createVersion(id, body) {
+        return this.projectsService.createVersion(id, body.label);
     }
 };
 exports.ProjectsController = ProjectsController;
 __decorate([
     (0, common_1.Get)(),
+    __param(0, (0, current_user_decorator_1.CurrentUser)('id')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], ProjectsController.prototype, "findAll", null);
 __decorate([
@@ -45,15 +57,39 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], ProjectsController.prototype, "findOne", null);
 __decorate([
-    (0, common_1.Put)(':id/state'),
+    (0, common_1.Post)(),
+    __param(0, (0, current_user_decorator_1.CurrentUser)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], ProjectsController.prototype, "create", null);
+__decorate([
+    (0, common_1.Put)(':id'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", void 0)
-], ProjectsController.prototype, "saveState", null);
+], ProjectsController.prototype, "update", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], ProjectsController.prototype, "delete", null);
+__decorate([
+    (0, common_1.Post)(':id/versions'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], ProjectsController.prototype, "createVersion", null);
 exports.ProjectsController = ProjectsController = __decorate([
     (0, common_1.Controller)('projects'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __metadata("design:paramtypes", [projects_service_1.ProjectsService])
 ], ProjectsController);
 //# sourceMappingURL=projects.controller.js.map
