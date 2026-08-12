@@ -24,7 +24,7 @@ const categories = [
   },
 ];
 
-export default function SidebarCatalog() {
+export default function SidebarCatalog({ className = '' }: { className?: string }) {
   const [openCats, setOpenCats] = useState<string[]>(['network', 'infra']);
 
   const toggleCat = (id: string) => {
@@ -37,7 +37,7 @@ export default function SidebarCatalog() {
   };
 
   return (
-    <aside className="w-64 bg-white border-r border-slate-200/80 flex flex-col z-10 shadow-sm">
+    <aside className={`w-full md:w-64 bg-white border-r border-slate-200/80 flex flex-col z-10 shadow-sm h-full ${className}`}>
       {/* Header */}
       <div className="px-5 py-4 border-b border-slate-100">
         <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Catalogue</p>

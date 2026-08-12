@@ -14,7 +14,8 @@ import {
   LayoutGrid,
   Undo2,
   Redo2,
-  FilePen
+  FilePen,
+  Settings2
 } from 'lucide-react';
 import SidebarCatalog from '../components/Editor/SidebarCatalog';
 import PropertiesPanel from '../components/Editor/PropertiesPanel';
@@ -39,6 +40,8 @@ export default function Editor() {
   const [isExporting, setIsExporting] = useState(false);
   const [projectName, setProjectName] = useState(`Architecture #${projectId}`);
   const [editingName, setEditingName] = useState(false);
+  const [mobileCatalogOpen, setMobileCatalogOpen] = useState(false);
+  const [mobilePropsOpen, setMobilePropsOpen] = useState(false);
 
   useEffect(() => {
     loadArchitecture(projectId);
@@ -246,14 +249,36 @@ export default function Editor() {
           );
         })}
         <div className="ml-auto flex items-center gap-2 text-[11px] text-slate-400">
-          <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[10px] font-mono">Del</kbd>
-          <span>pour supprimer un nœud sélectionné</span>
+          <kbd className="hidden sm:inline-block px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[10px] font-mono">Del</kbd>
+          <span className="hidden sm:inline">pour supprimer</span>
+          
+          {/* Mobile toggles */}
+          <button 
+            className="md:hidden flex items-center gap-1.5 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-600 hover:text-indigo-600"
+            onClick={() => setMobileCatalogOpen(true)}
+          >
+            <Layers className="w-3.5 h-3.5" />
+            Cat.
+          </button>
+          <button 
+            className="md:hidden flex items-center gap-1.5 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-600 hover:text-indigo-600"
+            onClick={() => setMobilePropsOpen(true)}
+          >
+            <Settings2 className="w-3.5 h-3.5" />
+            Prop.
+          </button>
         </div>
       </div>
 
       {/* ───── MAIN CONTENT ───── */}
       <div className="flex-1 flex overflow-hidden relative">
-        <SidebarCatalog />
+        {/* Mobile overlay for catalog */}
+        {mobileCatalogOpen && (
+          <div className="md:hidden fixed inset-0 bg-black/50 z-30" onClick={() => setMobileCatalogOpen(false)} />
+        )}
+        <div className={`absolute md:relative z-40 h-full transition-transform duration-300 ${mobileCatalogOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
+          <SidebarCatalog className="w-64" />
+        </div>
 
         {/* Canvas */}
         <main
@@ -266,7 +291,13 @@ export default function Editor() {
           <NetworkCanvas />
         </main>
 
-        <PropertiesPanel />
+        {/* Mobile overlay for properties */}
+        {mobilePropsOpen && (
+          <div className="md:hidden fixed inset-0 bg-black/50 z-30" onClick={() => setMobilePropsOpen(false)} />
+        )}
+        <div className={`absolute top-0 right-0 md:relative z-40 h-full transition-transform duration-300 ${mobilePropsOpen ? 'translate-x-0' : 'translate-x-full'} md:translate-x-0`}>
+          <PropertiesPanel className="w-72" />
+        </div>
       </div>
     </div>
   );

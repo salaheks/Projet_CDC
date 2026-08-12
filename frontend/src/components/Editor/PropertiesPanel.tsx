@@ -1,5 +1,5 @@
 import { useEditorStore } from '../../stores/editorStore';
-import { Router, Server, Shield, SwitchCamera, Globe, Wifi, Database, Cloud, Trash2, X } from 'lucide-react';
+import { Router, Server, Shield, SwitchCamera, Globe, Wifi, Database, Cloud, Trash2, X, Layers } from 'lucide-react';
 
 const typeConfig: Record<string, { label: string; icon: React.ElementType; color: string; bg: string; border: string }> = {
   router:   { label: 'Routeur',         icon: Router,       color: 'text-blue-600',    bg: 'bg-blue-50',    border: 'border-blue-200' },
@@ -25,7 +25,7 @@ const Field = ({ label, value, placeholder, onChange }: { label: string; value: 
   </div>
 );
 
-export default function PropertiesPanel() {
+export default function PropertiesPanel({ className = '' }: { className?: string }) {
   const selectedNode = useEditorStore((state) => state.selectedNode);
   const updateNodeData = useEditorStore((state) => state.updateNodeData);
   const setSelectedNode = useEditorStore((state) => state.setSelectedNode);
@@ -41,33 +41,31 @@ export default function PropertiesPanel() {
     });
   };
 
+  // If no node is selected, show global diagram stats
   if (!selectedNode) {
     return (
-      <aside className="w-72 bg-white border-l border-slate-200/80 flex flex-col z-10">
+      <aside className={`w-full md:w-72 bg-white border-l border-slate-200/80 flex flex-col z-10 h-full ${className}`}>
         <div className="px-5 py-4 border-b border-slate-100">
           <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Propriétés</p>
         </div>
-        <div className="flex-1 flex flex-col items-center justify-center p-6 gap-3 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center">
-            <Server className="w-7 h-7 text-slate-300" />
+        <div className="flex-1 p-5 flex flex-col items-center justify-center text-center">
+          <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+            <Layers className="w-8 h-8 text-slate-300" />
           </div>
-          <div>
-            <p className="text-sm font-semibold text-slate-500">Aucun élément sélectionné</p>
-            <p className="text-xs text-slate-400 mt-1">Cliquez sur un nœud du canvas pour voir et modifier ses propriétés.</p>
-          </div>
-        </div>
-
-        {/* Stats panel */}
-        <div className="border-t border-slate-100 p-4 space-y-3">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-2">Aperçu du schéma</p>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="bg-slate-50 rounded-xl p-3 text-center">
-              <div className="text-2xl font-bold text-slate-800">{nodes.length}</div>
-              <div className="text-[11px] text-slate-500 font-medium mt-0.5">Équipements</div>
+          <h3 className="text-slate-600 font-medium mb-1">Aucun nœud sélectionné</h3>
+          <p className="text-sm text-slate-400 max-w-[200px]">
+            Cliquez sur un composant pour voir et éditer ses propriétés
+          </p>
+          
+          {/* General Stats */}
+          <div className="mt-8 w-full space-y-3">
+            <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
+              <span className="text-sm text-slate-500 font-medium">Composants</span>
+              <span className="text-lg font-bold text-slate-700">{nodes.length}</span>
             </div>
-            <div className="bg-slate-50 rounded-xl p-3 text-center">
-              <div className="text-2xl font-bold text-slate-800">{edges.length}</div>
-              <div className="text-[11px] text-slate-500 font-medium mt-0.5">Connexions</div>
+            <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
+              <span className="text-sm text-slate-500 font-medium">Connexions</span>
+              <span className="text-lg font-bold text-slate-700">{edges.length}</span>
             </div>
           </div>
         </div>
@@ -80,7 +78,7 @@ export default function PropertiesPanel() {
   const Icon = cfg.icon;
 
   return (
-    <aside className="w-72 bg-white border-l border-slate-200/80 flex flex-col z-10">
+    <aside className={`w-full md:w-72 bg-white border-l border-slate-200/80 flex flex-col z-10 h-full ${className}`}>
       {/* Header */}
       <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
         <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Propriétés</p>
