@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf';
+import { useEditorStore } from '../stores/editorStore';
 
 /**
  * Captures the ReactFlow canvas by:
@@ -166,21 +167,47 @@ export const exportCanvasToPDF = async (containerId: string, projectName = 'arch
       finalW = pH * imgRatio;
     }
 
-    // Add title header
-    pdf.setFontSize(14);
-    pdf.setTextColor(30, 41, 59); // slate-800
-    pdf.text(projectName, pW / 2, 10, { align: 'center' });
+    // Fetch report settings
+    const { reportSettings } = useEditorStore.getState();
+    const clientName = reportSettings.clientName || 'Client';
+    const logoUrl = reportSettings.logoUrl;
 
-    // Add image (with small top margin for the title)
-    const marginX = (pW - finalW) / 2;
-    const marginY = Math.max((pH - finalH) / 2, 14);
-    pdf.addImage(dataUrl, 'PNG', marginX, marginY, finalW, finalH - (marginY - (pH - finalH) / 2));
+    // Add title header
+    pdf.setFontSize(16);
+    pdf.setTextColor(30, 41, 59); // slate-800
+    pdf.text(projectName, pW / 2, 12, { align: 'center' });
+    
+    // Add Client Name
+    pdf.setFontSize(11);
+    pdf.setTextColor(100, 116, 139);
+    pdf.text(`Projet pour : ${clientName}`, pW / 2, 18, { align: 'center' });
+
+    // Try to add logo if it exists (assuming it's a valid image URL/base64 jsPDF can handle)
+    if (logoUrl) {
+      try {
+        // Just an attempt, if it fails due to CORS or format, we catch it
+        pdf.addImage(logoUrl, 10, 5, 25, 25, undefined, 'FAST');
+      } catch (e) {
+        console.warn('Impossible d\'ajouter le logo au PDF', e);
+      }
+    }
+
+    // Add image (with margin for the title area)
+    const marginTop = 25; 
+    const marginY = Math.max((pH - finalH) / 2, marginTop);
+    
+    // Ensure we don't overflow the bottom
+    const adjustedH = Math.min(finalH, pH - marginY - 10);
+    const adjustedW = finalW * (adjustedH / finalH);
+    const adjustedX = (pW - adjustedW) / 2;
+
+    pdf.addImage(dataUrl, 'PNG', adjustedX, marginY, adjustedW, adjustedH);
 
     // Footer
     pdf.setFontSize(8);
     pdf.setTextColor(100, 116, 139); // slate-500
     pdf.text(
-      `Exporté le ${new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })} — ArchiFlow`,
+      `Document généré le ${new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })} — ArchiFlow`,
       pW / 2, pH - 5, { align: 'center' }
     );
 

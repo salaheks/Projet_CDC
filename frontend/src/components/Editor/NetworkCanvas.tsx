@@ -67,11 +67,14 @@ export default function NetworkCanvas() {
   );
 
   const onSelectionChange = useCallback(
-    ({ nodes }: { nodes: Node[] }) => {
+    ({ nodes, edges }: { nodes: Node[], edges: any[] }) => {
       if (nodes.length === 1) {
         setSelectedNode(nodes[0]);
+      } else if (edges.length === 1) {
+        useEditorStore.getState().setSelectedEdge(edges[0]);
       } else {
         setSelectedNode(null);
+        useEditorStore.getState().setSelectedEdge(null);
       }
     },
     [setSelectedNode]
